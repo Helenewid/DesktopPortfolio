@@ -19,6 +19,33 @@
   scaleStage();
   window.addEventListener("resize", scaleStage);
 
+  /* ---------- Dock magnification (macOS-style) ---------- */
+  var dock = document.querySelector(".dock");
+  var dockIcons = document.querySelectorAll(".dock-icon");
+  var dockMagnifyQuery = window.matchMedia("(min-width: 701px)");
+
+  function resetDockIcons() {
+    dockIcons.forEach(function (icon) { icon.style.transform = ""; });
+  }
+
+  if (dock) {
+    dock.addEventListener("mousemove", function (e) {
+      if (!dockMagnifyQuery.matches) return;
+      var mouseX = e.clientX;
+      var maxDist = 90;
+      var maxScale = 1.55;
+      dockIcons.forEach(function (icon) {
+        var rect = icon.getBoundingClientRect();
+        var center = rect.left + rect.width / 2;
+        var dist = Math.abs(mouseX - center);
+        var scale = dist < maxDist ? 1 + (maxScale - 1) * (1 - dist / maxDist) : 1;
+        var lift = (scale - 1) * 18;
+        icon.style.transform = "scale(" + scale.toFixed(3) + ") translateY(-" + lift.toFixed(2) + "px)";
+      });
+    });
+    dock.addEventListener("mouseleave", resetDockIcons);
+  }
+
   /* ---------- Window (overlay) open / close ---------- */
   var backdrop = document.getElementById("backdrop");
   var windows = {
@@ -126,4 +153,24 @@
       if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
+
+  /* ---------- Scroll-triggered reveal for case study sections ---------- */
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduceMotion && "IntersectionObserver" in window) {
+    document.querySelectorAll(".wittario-body").forEach(function (root) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { root: root, threshold: 0.15 });
+
+      root.querySelectorAll(".case-section").forEach(function (section) {
+        section.classList.add("reveal");
+        observer.observe(section);
+      });
+    });
+  }
 })();
